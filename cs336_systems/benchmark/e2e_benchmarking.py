@@ -102,10 +102,10 @@ def run_benchmark(
 ) -> None:
     sizes = [
         ("small", 768, 3072, 12, 12),
-        ("medium", 1024, 4096, 24, 16),
-        ("large", 1280, 5120, 36, 20),
-        ("xl", 1600, 6400, 48, 25),
-        ("2.7B", 2560, 10240, 32, 32),
+        # ("medium", 1024, 4096, 24, 16),
+        # ("large", 1280, 5120, 36, 20),
+        # ("xl", 1600, 6400, 48, 25),
+        # ("2.7B", 2560, 10240, 32, 32),
     ]
 
     rows: list[dict] = []
@@ -125,7 +125,7 @@ def run_benchmark(
     df = pd.DataFrame(rows)
     markdown = df.to_markdown(index=False)
 
-    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     out_path = os.path.join(repo_root, "experiment_logs",f"benchmark_results_{assignment_section}_{timestamp}.md")
     with open(out_path, "w") as f:
@@ -135,6 +135,7 @@ def run_benchmark(
 
 
 if __name__ == "__main__":
-    run_benchmark("1.1.3")
+    # run_benchmark("1.1.3")
+    run_benchmark("1.1.4")
 
 
