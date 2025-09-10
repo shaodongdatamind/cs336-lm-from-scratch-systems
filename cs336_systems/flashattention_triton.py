@@ -148,6 +148,9 @@ def flash_fwd_kernel(
     tl.store(L_block_ptr, Li.to(L_dtype), boundary_check=(0,))
 
 
+from .flashattention_backward import flash_backward
+
+
 class FlashAttention2TritonAutogradFunction(torch.autograd.Function):
     """
     Triton-based forward pass for FlashAttention-2.
@@ -164,8 +167,9 @@ class FlashAttention2TritonAutogradFunction(torch.autograd.Function):
         assert d == d_k == d_v and n_keys == n_vals, "Dimension mismatch among Q/K/V"
 
         # Tile sizes (tunable)
-        Bq = 64
-        Bk = 64
+        # 64 * 64 is too large for shared memory on RTX3070, but should be fine on H100
+        Bq = 16
+        Bk = 16
 
         # Ensure contiguous for straightforward stride handling
         Qc = Q.contiguous()
@@ -217,6 +221,9 @@ class FlashAttention2TritonAutogradFunction(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, dO: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, None]:
-        raise NotImplementedError("Backward pass not implemented for FlashAttention2TritonAutogradFunction.")
+        L, Q, K, V, O = ctx.saved_tensors
+        is_causal = getattr(ctx, "is_causal", False)
+        dQ, dK, dV = flash_backward(Q, K, V, O, dO, L, is_causal)
+        return dQ, dK, dV, None
 
 

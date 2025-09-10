@@ -6,10 +6,11 @@ from typing import Tuple
 import torch
 
 
+from .flashattention_backward import flash_backward
+
+
 class FlashAttention2AutogradFunction(torch.autograd.Function):
-    """
-    Pure-PyTorch implementation of the FlashAttention-2 forward pass using tiling.
-    """
+    """Tiled FlashAttention-2 forward in PyTorch."""
 
     @staticmethod
     def forward(ctx, Q: torch.Tensor, K: torch.Tensor, V: torch.Tensor, is_causal: bool = False) -> torch.Tensor:
@@ -93,11 +94,18 @@ class FlashAttention2AutogradFunction(torch.autograd.Function):
         ctx.save_for_backward(L, Q, K, V, O)
         ctx.is_causal = bool(is_causal)
 
-        # Return only the attention output as per autograd.Function API
         return O
 
     @staticmethod
     def backward(ctx, dO: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, None]:
-        raise NotImplementedError("Backward pass not implemented for FlashAttention2AutogradFunction.")
+        # Retrieve saved tensors
+        L, Q, K, V, O = ctx.saved_tensors
+        is_causal = getattr(ctx, "is_causal", False)
+
+        # Compute gradients via recomputation-based backward
+        dQ, dK, dV = flash_backward(Q, K, V, O, dO, L, is_causal)
+
+        # None for is_causal
+        return dQ, dK, dV, None
 
 
